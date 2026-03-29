@@ -9,6 +9,15 @@ import { Request, Response } from 'express';
 export const register = async (req: Request, res: Response) => {
   const { fullName, email, password } = req.body;
   try {
+    console.log('[register] request received', {
+      origin: req.headers.origin,
+      contentType: req.headers['content-type'],
+      hasFullName: Boolean(fullName),
+      fullNameLength: typeof fullName === 'string' ? fullName.trim().length : 0,
+      email,
+      hasPassword: Boolean(password),
+    });
+
     if (!fullName || !email || !password) {
       res.status(400).json({ message: 'All fields are required' });
       return;
@@ -35,14 +44,26 @@ export const register = async (req: Request, res: Response) => {
     });
 
     if (newUser) {
+      if (!process.env.JWT_SECRET) {
+        res.status(500).json({ message: 'JWT_SECRET is not configured' });
+        return;
+      }
+
       generateToken(newUser._id.toString(), res);
       await newUser.save();
+      console.log('[register] user saved', {
+        userId: newUser._id.toString(),
+        email: newUser.email,
+      });
 
       // ✅ FIXED chat creation logic
       const existingChats = await Chat.find({ user: newUser._id });
       if (existingChats.length === 0) {
         await Chat.create({ user: newUser._id, messages: [] });
       }
+      console.log('[register] chat initialized', {
+        userId: newUser._id.toString(),
+      });
 
       res.status(201).json({
         _id: newUser._id,
@@ -54,7 +75,42 @@ export const register = async (req: Request, res: Response) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    console.error('Error during register:', error);
+    console.error('[register] controller error', {
+      name: (error as any)?.name,
+      code: (error as any)?.code,
+      message: (error as any)?.message,
+      keyPattern: (error as any)?.keyPattern,
+      errors: (error as any)?.errors,
+    });
+
+    if ((error as any)?.code === 11000) {
+      const duplicateField = Object.keys((error as any).keyPattern || {})[0];
+
+      if (duplicateField === 'email') {
+        res.status(400).json({ message: 'User already exists' });
+        return;
+      }
+
+      if (duplicateField === 'fullName') {
+        res.status(400).json({ message: 'Full name is already taken' });
+        return;
+      }
+
+      res.status(400).json({ message: `${duplicateField} already exists` });
+      return;
+    }
+
+    if ((error as any)?.name === 'ValidationError') {
+      const firstValidationError = Object.values((error as any).errors || {})[0] as
+        | { message?: string }
+        | undefined;
+
+      res.status(400).json({
+        message: firstValidationError?.message || 'Invalid registration data',
+      });
+      return;
+    }
+
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -98,7 +154,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
     try {
-        res.cookie("jwt", "", { maxAge: 0});
+        res.cookie("token", "", { maxAge: 0});
         res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
         console.error('Error during logout:', error);

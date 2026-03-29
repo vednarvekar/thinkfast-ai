@@ -10,7 +10,7 @@ export default function WelcomePage() {
   useEffect(() => {
     const fetchName = async () => {
       try {
-        const res = await fetch('http://localhost:8114/api/user/settings', {
+        const res = await fetch('http://localhost:4004/api/user/settings', {
           credentials: 'include',
         });
         const data = await res.json();

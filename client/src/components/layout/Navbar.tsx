@@ -22,7 +22,7 @@ export default function NavbarChat({ user }: Props) {
 
   const fetchChatHistory = async () => {
     try {
-      const res = await fetch('http://localhost:8114/api/chat/history', {
+      const res = await fetch('http://localhost:4004/api/chat/history', {
         credentials: 'include',
       });
 
@@ -38,7 +38,7 @@ export default function NavbarChat({ user }: Props) {
 
  const createNewChat = async () => {
   try {
-    const res = await fetch('http://localhost:8114/api/chat/new', {
+    const res = await fetch('http://localhost:4004/api/chat/new', {
       method: 'POST',
       credentials: 'include',
     });

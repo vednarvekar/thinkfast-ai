@@ -85,3 +85,27 @@ body {
 .prose-sm em {
   font-style: italic;
 }
+
+.ai-markdown {
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.ai-markdown > :first-child {
+  margin-top: 0;
+}
+
+.ai-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.ai-markdown a {
+  color: #86efac;
+  text-decoration: underline;
+}
+
+.ai-markdown hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 1rem 0;
+}

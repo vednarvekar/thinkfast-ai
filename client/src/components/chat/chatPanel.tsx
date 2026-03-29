@@ -29,6 +29,149 @@ interface ChatPanelProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 
+const formatAssistantMessage = (content: string) => {
+  const normalized = content.replace(/\r\n/g, '\n').trim();
+
+  const splitInlineLists = normalized
+    // Put numbered items on their own lines even when the model returns them inline.
+    .replace(/([^\n])\s+(?=\d+\.\s)/g, '$1\n')
+    // Do the same for bullets.
+    .replace(/([^\n])\s+(?=[•*-]\s)/g, '$1\n')
+    // If a list follows a sentence, create a visual block break.
+    .replace(/([:])\n(?=\d+\.\s|[•*-]\s)/g, '$1\n\n')
+    // Ensure adjacent list items don't collapse together.
+    .replace(/(\n\d+\.\s[^\n]+)\n(?=\d+\.\s)/g, '$1\n')
+    .replace(/(\n[•*-]\s[^\n]+)\n(?=[•*-]\s)/g, '$1\n');
+
+  const lines = splitInlineLists
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const rebuilt: string[] = [];
+
+  for (const line of lines) {
+    const isListItem = /^(\d+\.\s|[•*-]\s)/.test(line);
+    const previousLine = rebuilt[rebuilt.length - 1];
+    const previousWasList = previousLine ? /^(\d+\.\s|[•*-]\s)/.test(previousLine) : false;
+
+    if (isListItem && rebuilt.length > 0 && !previousWasList) {
+      rebuilt.push('');
+    }
+
+    rebuilt.push(line);
+  }
+
+  return rebuilt.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+};
+
+type AssistantBlock =
+  | { type: 'paragraph'; content: string }
+  | { type: 'ordered-list'; items: string[] }
+  | { type: 'unordered-list'; items: string[] };
+
+const parseAssistantBlocks = (content: string): AssistantBlock[] => {
+  const lines = formatAssistantMessage(content).split('\n');
+  const blocks: AssistantBlock[] = [];
+
+  let paragraphBuffer: string[] = [];
+  let orderedItems: string[] = [];
+  let unorderedItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length > 0) {
+      blocks.push({ type: 'paragraph', content: paragraphBuffer.join(' ').trim() });
+      paragraphBuffer = [];
+    }
+  };
+
+  const flushOrdered = () => {
+    if (orderedItems.length > 0) {
+      blocks.push({ type: 'ordered-list', items: orderedItems });
+      orderedItems = [];
+    }
+  };
+
+  const flushUnordered = () => {
+    if (unorderedItems.length > 0) {
+      blocks.push({ type: 'unordered-list', items: unorderedItems });
+      unorderedItems = [];
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph();
+      flushOrdered();
+      flushUnordered();
+      continue;
+    }
+
+    const orderedMatch = line.match(/^\d+\.\s+(.*)$/);
+    if (orderedMatch) {
+      flushParagraph();
+      flushUnordered();
+      orderedItems.push(orderedMatch[1].trim());
+      continue;
+    }
+
+    const unorderedMatch = line.match(/^[•*-]\s+(.*)$/);
+    if (unorderedMatch) {
+      flushParagraph();
+      flushOrdered();
+      unorderedItems.push(unorderedMatch[1].trim());
+      continue;
+    }
+
+    flushOrdered();
+    flushUnordered();
+    paragraphBuffer.push(line);
+  }
+
+  flushParagraph();
+  flushOrdered();
+  flushUnordered();
+
+  return blocks;
+};
+
+const markdownComponents = {
+  h1: ({node, ...props}: any) => (
+    <h1 className="mt-4 mb-2 text-xl font-bold text-white" {...props} />
+  ),
+  h2: ({node, ...props}: any) => (
+    <h2 className="mt-4 mb-2 text-lg font-semibold text-white" {...props} />
+  ),
+  h3: ({node, ...props}: any) => (
+    <h3 className="mt-3 mb-2 text-base font-semibold text-white" {...props} />
+  ),
+  p: ({node, ...props}: any) => (
+    <span className="whitespace-pre-wrap leading-7" {...props} />
+  ),
+  strong: ({node, ...props}: any) => (
+    <strong className="font-semibold" {...props} />
+  ),
+  em: ({node, ...props}: any) => (
+    <em className="italic" {...props} />
+  ),
+  blockquote: ({node, ...props}: any) => (
+    <blockquote className="my-3 border-l-2 border-green-400/60 pl-4 italic" {...props} />
+  ),
+  code: ({node, className, children, ...props}: any) => (
+    <code
+      className={`rounded bg-black/40 px-1.5 py-0.5 text-sm ${className || ''}`}
+      {...props}
+    >
+      {children}
+    </code>
+  ),
+  pre: ({node, ...props}: any) => (
+    <pre className="my-3 overflow-x-auto rounded-lg bg-black/50 p-3 text-sm" {...props} />
+  ),
+};
+
 export default function ChatPanel({
   onFileUpload,
   onExtractedText,
@@ -61,7 +204,7 @@ export default function ChatPanel({
 
     try {
       toast.info('Uploading...');
-      const res = await fetch('http://localhost:8114/api/upload', {
+      const res = await fetch('http://localhost:4004/api/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -101,22 +244,50 @@ export default function ChatPanel({
                 <div className="font-semibold mb-1">{isUser ? 'You' : 'Bolt AI'}</div>
 
                 {msg.role === 'assistant' ? (
-                  <div className="[&>div>p]:my-2 [&>div>ul]:my-2 [&>div>ol]:my-2 [&>div>li]:my-1">
-                    <ReactMarkdown
-                      components={{
-                        ol: ({node, ...props}) => (
-                          <ol className="my-3 pl-5 list-decimal" {...props} />
-                        ),
-                        li: ({node, ...props}) => (
-                          <li className="mb-1.5 [&>p]:inline" {...props} />
-                        ),
-                        p: ({node, ...props}) => (
-                          <p className="my-2.5" {...props} />
-                        )
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
+                  <div className="ai-markdown">
+                    {parseAssistantBlocks(msg.content).map((block, blockIndex) => {
+                      if (block.type === 'ordered-list') {
+                        return (
+                          <ol
+                            key={blockIndex}
+                            className="my-3 pl-5 list-decimal space-y-2"
+                          >
+                            {block.items.map((item, itemIndex) => (
+                              <li key={itemIndex}>
+                                <ReactMarkdown components={markdownComponents}>
+                                  {item}
+                                </ReactMarkdown>
+                              </li>
+                            ))}
+                          </ol>
+                        );
+                      }
+
+                      if (block.type === 'unordered-list') {
+                        return (
+                          <ul
+                            key={blockIndex}
+                            className="my-3 pl-5 list-disc space-y-2"
+                          >
+                            {block.items.map((item, itemIndex) => (
+                              <li key={itemIndex}>
+                                <ReactMarkdown components={markdownComponents}>
+                                  {item}
+                                </ReactMarkdown>
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      }
+
+                      return (
+                        <div key={blockIndex} className="my-2">
+                          <ReactMarkdown components={markdownComponents}>
+                            {block.content}
+                          </ReactMarkdown>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{msg.content}</p>

@@ -60,6 +60,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <input
+              suppressHydrationWarning
               type="email"
               placeholder="Email"
               value={email}
@@ -69,6 +70,7 @@ export default function LoginPage() {
               required
             />
             <input
+              suppressHydrationWarning
               type="password"
               placeholder="Password"
               value={password}
@@ -78,6 +80,7 @@ export default function LoginPage() {
               required
             />
             <button
+              suppressHydrationWarning
               type="submit"
               className="mt-2 bg-white text-black py-2 rounded font-bold hover:bg-gray-200 transition"
             >
@@ -87,6 +90,7 @@ export default function LoginPage() {
             <p className="mt-4 text-sm">
               Don't have an account?{" "}
               <button
+                suppressHydrationWarning
                 type="button"
                 onClick={() => router.push("/register")}
                 className="underline cursor-pointer"

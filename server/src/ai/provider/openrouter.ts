@@ -96,7 +96,7 @@ Numbering Rules:
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'moonshotai/kimi-k2:free',
+        model: 'nvidia/nemotron-3-super-120b-a12b:free',
         messages: formattedMessages,
         temperature: 0.5,
         max_tokens: maxLength,

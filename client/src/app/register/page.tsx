@@ -18,11 +18,41 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post("/auth/register", { name, email, password });
-      setUser(res.data.user);
+      console.log("[register] submitting", {
+        apiBaseURL: axios.defaults.baseURL,
+        fullNameLength: name.trim().length,
+        email,
+      });
+
+      const res = await axios.post("/auth/register", {
+        fullName: name.trim(),
+        email,
+        password,
+      });
+
+      console.log("[register] success", res.data);
+
+      setUser({
+        _id: res.data._id,
+        fullName: res.data.fullName,
+        email: res.data.email,
+      });
       router.push("/chat");
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Registration failed.");
+      const errorDetails = {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        code: err?.code,
+        message: err?.message,
+      };
+
+      console.error("[register] failed", errorDetails);
+
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          `Registration failed. ${JSON.stringify(errorDetails)}`
+      );
     }
   };
 
@@ -78,6 +108,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleRegister} className="flex flex-col gap-4">
             <input
+              suppressHydrationWarning
               type="text"
               placeholder="Name"
               className="p-3 rounded bg-white/10 text-white focus:outline-none"
@@ -86,6 +117,7 @@ export default function RegisterPage() {
               required
             />
             <input
+              suppressHydrationWarning
               type="email"
               placeholder="Email"
               className="p-3 rounded bg-white/10 text-white focus:outline-none"
@@ -95,6 +127,7 @@ export default function RegisterPage() {
               autoComplete="email"
             />
             <input
+              suppressHydrationWarning
               type="password"
               placeholder="Password"
               className="p-3 rounded bg-white/10 text-white focus:outline-none"
@@ -104,6 +137,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
             <button
+              suppressHydrationWarning
               type="submit"
               className="mt-2 bg-white text-black py-2 rounded font-bold hover:bg-gray-200 transition"
             >
@@ -113,6 +147,7 @@ export default function RegisterPage() {
             <p className="mt-4 text-sm">
               Already have an account?{" "}
               <button
+                suppressHydrationWarning
                 type="button"
                 onClick={() => router.push("/login")}
                 className="underline cursor-pointer bg-transparent border-none p-0"

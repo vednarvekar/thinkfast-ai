@@ -30,7 +30,7 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch('http://localhost:8114/api/user/settings', {
+        const res = await fetch('http://localhost:4004/api/user/settings', {
           credentials: 'include',
         });
         const data = await res.json();
@@ -50,7 +50,7 @@ export default function ChatPage() {
 
     const loadChat = async () => {
       try {
-        const res = await fetch(`http://localhost:8114/api/chat/${chatIdFromURL}`, {
+        const res = await fetch(`http://localhost:4004/api/chat/${chatIdFromURL}`, {
           credentials: 'include',
         });
         const data = await res.json();
@@ -90,7 +90,7 @@ export default function ChatPage() {
         conversationHistory: chatLog.slice(-4)
       };
 
-      const res = await fetch('http://localhost:8114/api/chat/ask', {
+      const res = await fetch('http://localhost:4004/api/chat/ask', {
         method: 'POST',
         credentials: 'include',
         headers: {
