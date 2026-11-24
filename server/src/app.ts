@@ -14,6 +14,9 @@ const app = express();
 const allowedOrigins = new Set([
   'http://localhost:4064',
   'http://127.0.0.1:4064',
+  'http://localhost:4065',
+  'http://127.0.0.1:4065',
+  process.env.CLIENT_ORIGIN || 'http://localhost:4064',
 ]);
 
 // ✅ Apply rate limiter early

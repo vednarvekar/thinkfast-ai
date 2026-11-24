@@ -184,6 +184,7 @@ export default function ChatPanel({
   chatLog,
   messagesEndRef,
 }: ChatPanelProps) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4004';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -204,7 +205,7 @@ export default function ChatPanel({
 
     try {
       toast.info('Uploading...');
-      const res = await fetch('http://localhost:4004/api/upload', {
+      const res = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         body: formData,
         credentials: 'include',

@@ -1,0 +1,31 @@
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/ai-chatbot
+      JWT_SECRET: ${JWT_SECRET:-docker-development-secret-change-me}
+      CLIENT_ORIGIN: http://localhost:4064
+    depends_on:
+      mongo:
+        condition: service_started
+    ports: ["4004:5000"]
+  client:
+    build:
+      context: ./client
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4004
+    restart: unless-stopped
+    depends_on: [server]
+    ports: ["4064:4064"]
+volumes:
+  mongo_data:

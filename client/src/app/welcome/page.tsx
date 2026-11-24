@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function WelcomePage() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4004';
   const router = useRouter();
   const [name, setName] = useState('');
 
   useEffect(() => {
     const fetchName = async () => {
       try {
-        const res = await fetch('http://localhost:4004/api/user/settings', {
+        const res = await fetch(`${apiUrl}/api/user/settings`, {
           credentials: 'include',
         });
         const data = await res.json();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import ChatPanel from '@/components/chat/chatPanel';
 import NavbarChat from '@/components/layout/Navbar';
@@ -12,7 +12,8 @@ interface Message {
   content: string;
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4004';
   const router = useRouter();
   const searchParams = useSearchParams();
   const chatIdFromURL = searchParams.get('id');
@@ -30,7 +31,7 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch('http://localhost:4004/api/user/settings', {
+        const res = await fetch(`${apiUrl}/api/user/settings`, {
           credentials: 'include',
         });
         const data = await res.json();
@@ -50,7 +51,7 @@ export default function ChatPage() {
 
     const loadChat = async () => {
       try {
-        const res = await fetch(`http://localhost:4004/api/chat/${chatIdFromURL}`, {
+        const res = await fetch(`${apiUrl}/api/chat/${chatIdFromURL}`, {
           credentials: 'include',
         });
         const data = await res.json();
@@ -74,7 +75,7 @@ export default function ChatPage() {
 
     setLoading(true);
     
-    const userMessage = {
+    const userMessage: Message = {
       role: 'user',
       content: userInput.trim() || (uploadedFile ? `📄 ${uploadedFile.name}` : extractedText)
     };
@@ -90,7 +91,7 @@ export default function ChatPage() {
         conversationHistory: chatLog.slice(-4)
       };
 
-      const res = await fetch('http://localhost:4004/api/chat/ask', {
+      const res = await fetch(`${apiUrl}/api/chat/ask`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -148,5 +149,13 @@ export default function ChatPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>}>
+      <ChatPageContent />
+    </Suspense>
   );
 }
